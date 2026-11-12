@@ -24,13 +24,14 @@ class ChatCompletionClient:
         self._headers = {'Authorization': f'Bearer {api_key}'}
         self._transport = transport
 
-    def complete(self, messages, *, max_completion_tokens, temperature, reasoning_effort):
+    def complete(self, messages, *, max_completion_tokens, temperature, reasoning_effort, response_format):
         payload = {
             'model': self.model,
             'messages': messages,
             'max_completion_tokens': max_completion_tokens,
             'temperature': temperature,
             'reasoning_effort': reasoning_effort,
+            'response_format': response_format,
         }
         try:
             with httpx.Client(

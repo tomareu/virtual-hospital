@@ -1,9 +1,9 @@
 from django.contrib import admin
-from .models import DailyTokenUsage, RecordSummary
+from .models import DailyTokenUsage, RecordReport
 
 
-@admin.register(RecordSummary)
-class RecordSummaryAdmin(admin.ModelAdmin):
+@admin.register(RecordReport)
+class RecordReportAdmin(admin.ModelAdmin):
     list_display = ('record', 'language', 'generated_by', 'generated_at')
     list_filter = ('language', 'generated_by')
     readonly_fields = ('generated_at',)

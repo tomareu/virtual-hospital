@@ -3,7 +3,7 @@ import uuid
 import httpx
 from django.conf import settings
 
-from .exceptions import SummaryUnavailable, TurnstileFailed
+from .exceptions import ReportUnavailable, TurnstileFailed
 
 SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
 VERIFY_TIMEOUT = httpx.Timeout(5.0)
@@ -44,7 +44,7 @@ def verify_token(token, *, secret, allowed_hostnames, transport=None):
 
 def require_human(token):
     if not settings.TURNSTILE_SECRET_KEY:
-        raise SummaryUnavailable()
+        raise ReportUnavailable()
     try:
         verified = verify_token(
             token,
@@ -52,6 +52,6 @@ def require_human(token):
             allowed_hostnames=settings.TURNSTILE_ALLOWED_HOSTNAMES,
         )
     except TurnstileUnavailable as error:
-        raise SummaryUnavailable() from error
+        raise ReportUnavailable() from error
     if not verified:
         raise TurnstileFailed()

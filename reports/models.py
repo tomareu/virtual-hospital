@@ -5,31 +5,52 @@ from django.db.models.lookups import LessThanOrEqual
 from patients.models import PatientRecord
 
 SUMMARY_MAX_LENGTH = 1200
+DIAGNOSIS_MAX_LENGTH = 300
+DESCRIPTION_MAX_LENGTH = 1500
+PROCEDURES_MAX_LENGTH = 750
+INDICATIONS_MAX_LENGTH = 750
 
 
-class RecordSummary(models.Model):
+class RecordReport(models.Model):
     LANGUAGE_CHOICES = [
         ('en', 'English'),
         ('es', 'Spanish'),
     ]
 
-    record = models.ForeignKey(PatientRecord, on_delete=models.CASCADE, related_name='summaries')
+    record = models.ForeignKey(PatientRecord, on_delete=models.CASCADE, related_name='reports')
     language = models.CharField(max_length=2, choices=LANGUAGE_CHOICES)
-    text = models.TextField(max_length=SUMMARY_MAX_LENGTH)
+    summary = models.TextField(max_length=SUMMARY_MAX_LENGTH)
+    diagnosis = models.CharField(max_length=DIAGNOSIS_MAX_LENGTH, blank=True)
+    description = models.TextField(max_length=DESCRIPTION_MAX_LENGTH)
+    procedures = models.TextField(max_length=PROCEDURES_MAX_LENGTH, blank=True)
+    indications = models.TextField(max_length=INDICATIONS_MAX_LENGTH, blank=True)
+    source_digest = models.CharField(max_length=64, editable=False)
     generated_by = models.CharField(max_length=100)
     generated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['record', 'language'], name='unique_summary_per_record_language'),
+            models.UniqueConstraint(fields=['record', 'language'], name='unique_report_per_record_language'),
             models.CheckConstraint(
-                condition=LessThanOrEqual(Length('text'), SUMMARY_MAX_LENGTH),
-                name='summary_text_max_length',
+                condition=LessThanOrEqual(Length('summary'), SUMMARY_MAX_LENGTH),
+                name='report_summary_max_length',
+            ),
+            models.CheckConstraint(
+                condition=LessThanOrEqual(Length('description'), DESCRIPTION_MAX_LENGTH),
+                name='report_description_max_length',
+            ),
+            models.CheckConstraint(
+                condition=LessThanOrEqual(Length('procedures'), PROCEDURES_MAX_LENGTH),
+                name='report_procedures_max_length',
+            ),
+            models.CheckConstraint(
+                condition=LessThanOrEqual(Length('indications'), INDICATIONS_MAX_LENGTH),
+                name='report_indications_max_length',
             ),
         ]
 
     def __str__(self):
-        return f"{self.get_language_display()} summary — {self.record}"
+        return f"{self.get_language_display()} report — {self.record}"
 
 
 class DailyTokenUsage(models.Model):
