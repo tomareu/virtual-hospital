@@ -238,6 +238,25 @@ body {
     height: 22px;
 }
 
+.mlvh-admit-btn:disabled {
+    background-color: var(--mlvh-blue);
+    border-color: var(--mlvh-blue);
+}
+
+.mlvh-admit-btn[aria-busy="true"] .mlvh-btn-icon {
+    animation: mlvh-busy 1s ease-in-out infinite;
+}
+
+@keyframes mlvh-busy {
+    50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mlvh-admit-btn[aria-busy="true"] .mlvh-btn-icon {
+        animation: none;
+    }
+}
+
 .mlvh-sidebar-link {
     gap: 0.65rem;
     color: var(--mlvh-blue-deep);

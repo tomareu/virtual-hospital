@@ -17,6 +17,7 @@ import {
 import { formatRecordSummary } from '../../constants/recordOptions.js';
 import { showToast } from '../../utils/toast.js';
 import { t, tOption, getLocale } from '../../i18n.js';
+import { downloadRecordReport } from './reportDownload.js';
 
 // --- Keeps the styled date text in sync with the (visually hidden) native date input ---
 const wireDateBadge = (inputId, textId) => {
@@ -345,7 +346,23 @@ export const initMedicalRecordsLogic = (initialPatientId = null) => {
 
         setCardActions([
             { icon: '/assets/icons/misc/back.svg', label: t('records.back'), onClick: () => renderHistoryCard(patient, currentRecords) },
+            { icon: '/assets/icons/misc/download.svg', label: t('records.download'), onClick: (event) => downloadReport(event.currentTarget, patient, record) },
         ]);
+    };
+
+    const downloadReport = async (button, patient, record) => {
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        try {
+            const { original } = await downloadRecordReport(patient, record);
+            showToast(t(original ? 'records.downloadedOriginal' : 'records.downloaded'), original ? 'info' : 'success');
+        } catch (error) {
+            console.error('API Error:', error);
+            showToast(error instanceof ApiError ? error.message : t('records.downloadError'), 'error');
+        } finally {
+            button.disabled = false;
+            button.removeAttribute('aria-busy');
+        }
     };
 
     const selectPatient = async (id) => {

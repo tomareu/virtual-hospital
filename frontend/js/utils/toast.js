@@ -19,11 +19,11 @@ const Toast = Swal.mixin({
 /**
  * Confirmation/error message in the corner of the screen
  * @param {string} message
- * @param {'success' | 'error'} variant
+ * @param {'success' | 'error' | 'info'} variant
  */
 export const showToast = (message, variant = 'success') => {
     Toast.fire({
-        icon: variant === 'error' ? 'error' : 'success',
+        icon: variant,
         title: message,
     });
 };
