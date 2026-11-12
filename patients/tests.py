@@ -1,11 +1,14 @@
 import datetime
+from io import StringIO
 from unittest.mock import patch
 
+from django.core.management import call_command
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from rest_framework.serializers import ValidationError
 from rest_framework.test import APITestCase
 
+from reports.models import RecordReport
 from .models import (
     Patient,
     PatientRecord,
@@ -56,6 +59,18 @@ def build_patient(**overrides):
     }
     fields.update(overrides)
     return Patient.objects.create(**fields)
+
+def reset_sandbox_at(now):
+    with patch('django.utils.timezone.now', return_value=now):
+        call_command('reset_sandbox', stdout=StringIO())
+
+def seed_days():
+    return [
+        *Patient.objects.order_by('pk').values_list('created_at__date', flat=True),
+        *PatientRecord.objects.order_by('pk').values_list('record_date', flat=True),
+        *PatientRecord.objects.order_by('pk').values_list('created_at__date', flat=True),
+        *RecordReport.objects.order_by('pk').values_list('generated_at__date', flat=True),
+    ]
 
 # --- Model behaviour ---
 
@@ -261,3 +276,21 @@ class RecordTextConstraintTests(TestCase):
                 with self.assertRaises(IntegrityError):
                     with transaction.atomic():
                         PatientRecord.objects.create(patient=patient, record_type='consultation', **values)
+
+# --- Sandbox reset ---
+
+RESET_NOW = datetime.datetime(2027, 3, 10, 12, 0, tzinfo=datetime.timezone.utc)
+
+class SandboxResetTests(TestCase):
+
+    def test_reset_moves_the_newest_seed_date_to_yesterday(self):
+        reset_sandbox_at(RESET_NOW)
+
+        self.assertEqual(max(seed_days()), datetime.date(2027, 3, 9))
+
+    def test_reset_keeps_the_time_between_seed_dates(self):
+        reset_sandbox_at(RESET_NOW)
+        first_reset = seed_days()
+        reset_sandbox_at(RESET_NOW + datetime.timedelta(days=10))
+
+        self.assertEqual(seed_days(), [day + datetime.timedelta(days=10) for day in first_reset])
