@@ -260,6 +260,7 @@ export const getPatientModal = () => {
 export const initPatientAdminLogic = () => {
 
     // DOM elements
+    const createModalElement = document.getElementById('createPatientModal');
     const patientForm = document.getElementById('patient-form');
     const avatarPreview = document.getElementById('avatar-preview');
     const nameInput = document.getElementById('name');
@@ -374,7 +375,13 @@ export const initPatientAdminLogic = () => {
     wireIconGroup(detailsSpeciesIconGroup, detailsSpecies);
     wireIconGroup(detailsSexIconGroup, detailsSex);
 
-    admissionDateInput.textContent = formatDisplayDate(toLocalIsoDate());
+    let admissionDate = '';
+
+    createModalElement.addEventListener('show.bs.modal', () => {
+        admissionDate = toLocalIsoDate();
+        admissionDateInput.textContent = formatDisplayDate(admissionDate);
+    });
+
     setUnknownDefaults(speciesSelect, sexSelect, locationSelect, pronounsSelect, speciesIconGroup, sexIconGroup, avatarPreview);
 
     speciesSelect.addEventListener('change', () =>
@@ -575,6 +582,7 @@ export const initPatientAdminLogic = () => {
             location: locationSelect.value,
             pronouns: pronounsSelect.value,
             id_number: idNumberInput.value.toUpperCase(),
+            record_date: admissionDate,
             consultation_type: consultationTypeSelect.value,
             assigned_professional: assignedProfessionalSelect.value,
             description: descriptionInput.value,
@@ -585,10 +593,9 @@ export const initPatientAdminLogic = () => {
             await loadPatients();
 
             patientForm.reset();
-            admissionDateInput.textContent = formatDisplayDate(toLocalIsoDate());
             setUnknownDefaults(speciesSelect, sexSelect, locationSelect, pronounsSelect, speciesIconGroup, sexIconGroup, avatarPreview);
 
-            bootstrap.Modal.getInstance(document.getElementById('createPatientModal'))?.hide();
+            bootstrap.Modal.getInstance(createModalElement)?.hide();
             showToast(t('patients.create.success'));
         } catch (error) {
             console.error(error);

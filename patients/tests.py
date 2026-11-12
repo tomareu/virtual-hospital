@@ -1,3 +1,6 @@
+import datetime
+from unittest.mock import patch
+
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from rest_framework.serializers import ValidationError
@@ -126,6 +129,27 @@ class PatientAdmissionApiTests(APITestCase):
         self.assertEqual(response.status_code, 201)
         patient = Patient.objects.get(id_number='A12')
         self.assertEqual(patient.records.count(), 1)
+
+    def test_admission_record_keeps_the_date_sent_by_the_visitor(self):
+        self.client.post(self.url, PATIENT_PAYLOAD, format='json')
+
+        record = PatientRecord.objects.get(patient__id_number='A12')
+        self.assertEqual(record.record_date, datetime.date(2026, 9, 9))
+
+    def test_admission_without_a_date_uses_the_server_date(self):
+        payload = {field: value for field, value in PATIENT_PAYLOAD.items() if field != 'record_date'}
+        server_now = datetime.datetime(2026, 11, 12, 0, 52, tzinfo=datetime.timezone.utc)
+        with patch('django.utils.timezone.now', return_value=server_now):
+            self.client.post(self.url, payload, format='json')
+
+        record = PatientRecord.objects.get(patient__id_number='A12')
+        self.assertEqual(record.record_date, datetime.date(2026, 11, 12))
+
+    def test_admission_rejects_an_invalid_date(self):
+        response = self.client.post(self.url, {**PATIENT_PAYLOAD, 'record_date': '2026-13-40'}, format='json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('record_date', response.data)
 
     def test_admission_rejects_an_invalid_id_number(self):
         response = self.client.post(

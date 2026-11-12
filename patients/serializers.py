@@ -5,6 +5,7 @@ from rest_framework import serializers
 from .models import Patient, PatientRecord, RECORD_DESCRIPTION_MAX_LENGTH
 
 ID_NUMBER_PATTERN = re.compile(r'^[A-Za-z0-9]{1,5}$')
+ADMISSION_RECORD_FIELDS = ['consultation_type', 'assigned_professional', 'description', 'record_date']
 
 
 class PatientRecordSerializer(serializers.ModelSerializer):
@@ -52,6 +53,8 @@ class PatientSerializer(serializers.ModelSerializer):
 
     description = serializers.CharField(write_only=True, max_length=RECORD_DESCRIPTION_MAX_LENGTH)
 
+    record_date = serializers.DateField(write_only=True, required=False)
+
     latest_record = serializers.SerializerMethodField()
 
     def get_latest_record(self, obj):
@@ -92,18 +95,14 @@ class PatientSerializer(serializers.ModelSerializer):
         Admitting a patient always produces its first PatientRecord
         so both are created together in one transaction.
         """
-        consultation_type = validated_data.pop('consultation_type')
-        assigned_professional = validated_data.pop('assigned_professional')
-        description = validated_data.pop('description')
+        admission_record = {
+            field: validated_data.pop(field)
+            for field in ADMISSION_RECORD_FIELDS
+            if field in validated_data
+        }
 
         with transaction.atomic():
             patient = super().create(validated_data)
-            PatientRecord.objects.create(
-                patient=patient,
-                record_type='admission',
-                consultation_type=consultation_type,
-                assigned_professional=assigned_professional,
-                description=description,
-            )
+            PatientRecord.objects.create(patient=patient, record_type='admission', **admission_record)
 
         return patient
