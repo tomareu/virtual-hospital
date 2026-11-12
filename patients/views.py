@@ -2,11 +2,18 @@ import secrets
 
 from django.conf import settings
 from django.core.management import call_command
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
+from .exceptions import RecordAlreadyComplete
 from .models import Patient
-from .serializers import PatientSerializer, PatientRecordSerializer, PatientRecordCreateSerializer
+from .serializers import (
+    PatientSerializer,
+    PatientRecordSerializer,
+    PatientRecordCreateSerializer,
+    PatientRecordCompleteSerializer,
+)
 
 class PatientViewSet(viewsets.ModelViewSet):
     """
@@ -43,6 +50,16 @@ class PatientViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         record = serializer.save(patient=patient, record_type='consultation')
         return Response(PatientRecordSerializer(record).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path=r'records/(?P<record_id>\d+)/complete')
+    def complete_record(self, request, pk=None, record_id=None):
+        record = get_object_or_404(self.get_object().records, pk=record_id)
+        if record.is_complete:
+            raise RecordAlreadyComplete()
+        serializer = PatientRecordCompleteSerializer(record, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(PatientRecordSerializer(record).data)
 
 
 @api_view(['GET'])

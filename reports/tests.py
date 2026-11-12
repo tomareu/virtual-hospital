@@ -586,6 +586,27 @@ class RecordPdfApiTests(APITestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+# --- Incomplete records ---
+
+class IncompleteRecordApiTests(APITestCase):
+
+    def setUp(self):
+        record = build_record(record_type='admission')
+        self.url = f'/api/reports/records/{record.id}/'
+
+    def assert_incomplete(self, response):
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.data['detail']['code'], 'record_incomplete')
+
+    def test_incomplete_records_cannot_be_downloaded(self):
+        for path in ['pdf/', 'es/', 'es/pdf/']:
+            with self.subTest(path=path):
+                self.assert_incomplete(self.client.get(f'{self.url}{path}'))
+
+    def test_incomplete_records_cannot_get_a_report(self):
+        response = self.client.post(self.url, {'language': 'es', 'turnstile_token': 'token'}, format='json')
+        self.assert_incomplete(response)
+
 # --- Turnstile ---
 
 class TurnstileVerificationTests(TestCase):
@@ -648,6 +669,12 @@ class GenerateReportCommandTests(TestCase):
         self.assertIn('summary: Resumen nuevo.', output.getvalue())
         self.assertIn('description: Seguimiento de rutina.', output.getvalue())
         self.assertTrue(RecordReport.objects.filter(record=self.record, language='es').exists())
+
+    def test_command_refuses_incomplete_records(self):
+        PatientRecord.objects.filter(pk=self.record.pk).update(record_type='admission')
+        with self.assertRaises(CommandError):
+            call_command('generate_report', self.record.id, language='es')
+        self.assertEqual(self.provider.requests, [])
 
     def test_command_refuses_to_replace_a_current_report_without_the_flag(self):
         create_report(self.record)

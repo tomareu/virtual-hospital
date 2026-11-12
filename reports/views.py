@@ -7,17 +7,21 @@ from rest_framework.views import APIView
 
 from patients.models import PatientRecord
 from .documents import document_filename, issue_date, render_record, render_report
+from .exceptions import RecordIncomplete
 from .generation import current_report, ensure_ai_configured, generate_report
 from .serializers import RecordReportSerializer, ReportRequestSerializer
 from .turnstile import require_human
 
 
-def get_active_record(record_id):
-    return get_object_or_404(PatientRecord.objects.select_related('patient'), pk=record_id, patient__is_active=True)
+def get_downloadable_record(record_id):
+    record = get_object_or_404(PatientRecord.objects.select_related('patient'), pk=record_id, patient__is_active=True)
+    if not record.is_complete:
+        raise RecordIncomplete()
+    return record
 
 
 def get_current_report(record_id, language):
-    report = current_report(get_active_record(record_id), language)
+    report = current_report(get_downloadable_record(record_id), language)
     if report is None:
         raise NotFound('This record has no up-to-date report in that language.', code='report_not_found')
     return report
@@ -32,7 +36,7 @@ def pdf_download(pdf, filename):
 class RecordReportCreateView(APIView):
 
     def post(self, request, record_id):
-        record = get_active_record(record_id)
+        record = get_downloadable_record(record_id)
         serializer = ReportRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         language = serializer.validated_data['language']
@@ -65,6 +69,6 @@ class RecordReportPdfView(APIView):
 class RecordPdfView(APIView):
 
     def get(self, request, record_id):
-        record = get_active_record(record_id)
+        record = get_downloadable_record(record_id)
         pdf = render_record(record, issue_date(request.query_params.get('tz')))
         return pdf_download(pdf, document_filename(record, record.language))

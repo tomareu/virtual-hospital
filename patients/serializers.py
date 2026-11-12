@@ -12,6 +12,8 @@ class PatientRecordSerializer(serializers.ModelSerializer):
     """
     History entry for a patient (admission, edit, discharge, etc).
     """
+    is_complete = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = PatientRecord
         fields = '__all__'
@@ -33,6 +35,14 @@ class PatientRecordCreateSerializer(serializers.ModelSerializer):
             'procedures',
             'indications',
         ]
+
+
+class PatientRecordCompleteSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PatientRecord
+        fields = ['diagnosis', 'procedures', 'indications']
+        extra_kwargs = {'diagnosis': {'required': True, 'allow_blank': False}}
 
 
 class PatientSerializer(serializers.ModelSerializer):

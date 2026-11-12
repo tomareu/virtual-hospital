@@ -41,6 +41,12 @@ RECORD_PAYLOAD = {
     'description': 'Routine follow-up.',
 }
 
+COMPLETION_PAYLOAD = {
+    'diagnosis': 'Mild cold.',
+    'procedures': 'Physical exam.',
+    'indications': 'Rest and fluids.',
+}
+
 RECORD_TEXT_LIMITS = {
     'description': RECORD_DESCRIPTION_MAX_LENGTH,
     'procedures': RECORD_PROCEDURES_MAX_LENGTH,
@@ -230,6 +236,77 @@ class RecordLanguageApiTests(APITestCase):
         response = self.client.post(self.add_record_url, {**RECORD_PAYLOAD, 'language': 'fr'}, format='json')
 
         self.assertEqual(response.data['language'][0]['code'], 'invalid_choice')
+
+# --- First consultation ---
+
+class FirstConsultationApiTests(APITestCase):
+
+    def setUp(self):
+        self.client.post('/api/patients/', PATIENT_PAYLOAD, format='json')
+        self.patient = Patient.objects.get(id_number='A12')
+        self.record = self.patient.records.get()
+        self.url = f'/api/patients/{self.patient.id}/records/{self.record.id}/complete/'
+
+    def test_first_consultation_starts_incomplete(self):
+        response = self.client.get(f'/api/patients/{self.patient.id}/records/')
+
+        self.assertFalse(response.data[0]['is_complete'])
+
+    def test_completing_fills_in_the_missing_fields(self):
+        response = self.client.post(self.url, COMPLETION_PAYLOAD, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data['is_complete'])
+        self.record.refresh_from_db()
+        self.assertEqual(
+            {field: getattr(self.record, field) for field in COMPLETION_PAYLOAD},
+            COMPLETION_PAYLOAD,
+        )
+
+    def test_completing_requires_a_diagnosis(self):
+        response = self.client.post(self.url, {**COMPLETION_PAYLOAD, 'diagnosis': '  '}, format='json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data['diagnosis'][0]['code'], 'blank')
+        self.record.refresh_from_db()
+        self.assertFalse(self.record.is_complete)
+
+    def test_completing_rejects_text_over_its_limit(self):
+        for field in ['procedures', 'indications']:
+            with self.subTest(field=field):
+                response = self.client.post(
+                    self.url, {**COMPLETION_PAYLOAD, field: 'x' * (RECORD_TEXT_LIMITS[field] + 1)}, format='json'
+                )
+
+                self.assertEqual(response.data[field][0]['code'], 'max_length')
+
+    def test_a_complete_consultation_cannot_be_completed_again(self):
+        self.client.post(self.url, COMPLETION_PAYLOAD, format='json')
+        response = self.client.post(self.url, {**COMPLETION_PAYLOAD, 'diagnosis': 'Something else.'}, format='json')
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.data['detail']['code'], 'record_already_complete')
+        self.record.refresh_from_db()
+        self.assertEqual(self.record.diagnosis, COMPLETION_PAYLOAD['diagnosis'])
+
+    def test_consultations_added_later_are_complete(self):
+        response = self.client.post(f'/api/patients/{self.patient.id}/add_record/', RECORD_PAYLOAD, format='json')
+
+        self.assertTrue(response.data['is_complete'])
+
+    def test_records_of_other_patients_are_not_found(self):
+        other = build_patient(id_number='B7')
+        response = self.client.post(
+            f'/api/patients/{other.id}/records/{self.record.id}/complete/', COMPLETION_PAYLOAD, format='json'
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_records_of_discharged_patients_are_not_found(self):
+        self.client.delete(f'/api/patients/{self.patient.id}/')
+        response = self.client.post(self.url, COMPLETION_PAYLOAD, format='json')
+
+        self.assertEqual(response.status_code, 404)
 
 # --- Record text limits ---
 

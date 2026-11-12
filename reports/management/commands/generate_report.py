@@ -23,6 +23,9 @@ class Command(BaseCommand):
         except PatientRecord.DoesNotExist as error:
             raise CommandError(f'Record {record_id} does not exist.') from error
 
+        if not record.is_complete:
+            raise CommandError(f'Record {record_id} is incomplete.')
+
         if not replace and current_report(record, language):
             raise CommandError(
                 'This record already has an up-to-date report in that language. Use --replace to regenerate it.'
