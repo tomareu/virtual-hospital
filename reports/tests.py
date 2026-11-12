@@ -13,7 +13,16 @@ from rest_framework.test import APITestCase
 
 from patients.models import Patient, PatientRecord, RECORD_DESCRIPTION_MAX_LENGTH
 from .ai import ChatCompletionClient
-from .documents import DEFAULT_AVATAR, avatar_path, format_date, issue_date, render_report, report_data
+from .documents import (
+    DEFAULT_AVATAR,
+    avatar_path,
+    format_date,
+    issue_date,
+    record_data,
+    render_record,
+    render_report,
+    report_data,
+)
 from .generation import (
     MAX_COMPLETION_TOKENS,
     REASONING_EFFORT,
@@ -395,7 +404,7 @@ class LabelCatalogTests(TestCase):
             'consultation_types': PatientRecord.CONSULTATION_TYPE_CHOICES,
             'professionals': PatientRecord.PROFESSIONAL_CHOICES,
         }
-        self.assertEqual(set(LABELS), {code for code, _ in RecordReport.LANGUAGE_CHOICES})
+        self.assertEqual(set(LABELS), {code for code, _ in PatientRecord.LANGUAGE_CHOICES})
         for language, groups in LABELS.items():
             for group, group_choices in choices.items():
                 with self.subTest(language=language, group=group):
@@ -447,6 +456,14 @@ class ReportDataTests(TestCase):
         ])
         self.assertEqual(data['indications'], {'heading': 'Indicaciones', 'text': 'Reposo en casa.'})
 
+    def test_original_record_is_shown_in_its_own_language_without_a_summary(self):
+        record = build_record(language='es', description='Control de rutina.', indications='Reposo en casa.')
+        data = record_data(record, ISSUED_ON)
+        self.assertEqual(data['heading'], 'Informe de consulta')
+        self.assertIsNone(data['summary'])
+        self.assertEqual(data['details']['rows'], [['Descripción', 'Control de rutina.']])
+        self.assertEqual(data['indications'], {'heading': 'Indicaciones', 'text': 'Reposo en casa.'})
+
     def test_empty_record_fields_are_left_out(self):
         data = report_data(create_report(build_record(), language='en'), ISSUED_ON)
         self.assertIsNone(data['indications'])
@@ -493,6 +510,13 @@ class ReportRenderingTests(TestCase):
             with self.subTest(language=language):
                 self.assertTrue(render_report(report, ISSUED_ON).startswith(b'%PDF-'))
 
+    def test_original_records_render_in_every_language(self):
+        record = build_record(indications='Line one\nLine two')
+        for language in LABELS:
+            record.language = language
+            with self.subTest(language=language):
+                self.assertTrue(render_record(record, ISSUED_ON).startswith(b'%PDF-'))
+
 
 class ReportPdfApiTests(APITestCase):
 
@@ -530,6 +554,33 @@ class ReportPdfApiTests(APITestCase):
 
     def test_records_of_discharged_patients_are_not_found(self):
         create_report(self.record)
+        self.record.patient.is_active = False
+        self.record.patient.save()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class RecordPdfApiTests(APITestCase):
+
+    def setUp(self):
+        self.record = build_record(language='es')
+        self.url = f'/api/reports/records/{self.record.id}/pdf/'
+
+    def test_original_record_downloads_in_its_own_language_without_a_report(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response['Content-Disposition'], f'attachment; filename="mlvh-EA-A12-{self.record.id}-es.pdf"'
+        )
+        self.assertTrue(response.content.startswith(b'%PDF-'))
+
+    def test_issue_date_uses_the_tz_parameter(self):
+        with patch('django.utils.timezone.now', return_value=EVENING_IN_CHILE), \
+                patch('reports.views.render_record', return_value=b'%PDF-') as render:
+            self.client.get(self.url, {'tz': 'America/Santiago'})
+        self.assertEqual(render.call_args.args[1], datetime.date(2026, 10, 29))
+
+    def test_records_of_discharged_patients_are_not_found(self):
         self.record.patient.is_active = False
         self.record.patient.save()
         response = self.client.get(self.url)

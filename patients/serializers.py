@@ -5,7 +5,7 @@ from rest_framework import serializers
 from .models import Patient, PatientRecord, RECORD_DESCRIPTION_MAX_LENGTH
 
 ID_NUMBER_PATTERN = re.compile(r'^[A-Za-z0-9]{1,5}$')
-ADMISSION_RECORD_FIELDS = ['consultation_type', 'assigned_professional', 'description', 'record_date']
+ADMISSION_RECORD_FIELDS = ['consultation_type', 'assigned_professional', 'description', 'record_date', 'language']
 
 
 class PatientRecordSerializer(serializers.ModelSerializer):
@@ -27,6 +27,7 @@ class PatientRecordCreateSerializer(serializers.ModelSerializer):
             'consultation_type',
             'assigned_professional',
             'record_date',
+            'language',
             'diagnosis',
             'description',
             'procedures',
@@ -54,6 +55,8 @@ class PatientSerializer(serializers.ModelSerializer):
     description = serializers.CharField(write_only=True, max_length=RECORD_DESCRIPTION_MAX_LENGTH)
 
     record_date = serializers.DateField(write_only=True, required=False)
+
+    language = serializers.ChoiceField(choices=PatientRecord.LANGUAGE_CHOICES, write_only=True, required=False)
 
     latest_record = serializers.SerializerMethodField()
 

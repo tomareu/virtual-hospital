@@ -188,6 +188,34 @@ class ApiErrorCodeTests(APITestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.data['detail']['code'], 'not_found')
 
+# --- Record language ---
+
+class RecordLanguageApiTests(APITestCase):
+
+    def setUp(self):
+        self.patient = build_patient()
+        self.add_record_url = f'/api/patients/{self.patient.id}/add_record/'
+
+    def test_consultation_keeps_the_language_it_was_written_in(self):
+        self.client.post(self.add_record_url, {**RECORD_PAYLOAD, 'language': 'es'}, format='json')
+
+        self.assertEqual(self.patient.records.get().language, 'es')
+
+    def test_admission_keeps_the_language_it_was_written_in(self):
+        self.client.post('/api/patients/', {**PATIENT_PAYLOAD, 'id_number': 'B7', 'language': 'es'}, format='json')
+
+        self.assertEqual(PatientRecord.objects.get(patient__id_number='B7').language, 'es')
+
+    def test_records_without_a_language_are_recorded_in_english(self):
+        self.client.post(self.add_record_url, RECORD_PAYLOAD, format='json')
+
+        self.assertEqual(self.patient.records.get().language, 'en')
+
+    def test_unsupported_language_is_rejected(self):
+        response = self.client.post(self.add_record_url, {**RECORD_PAYLOAD, 'language': 'fr'}, format='json')
+
+        self.assertEqual(response.data['language'][0]['code'], 'invalid_choice')
+
 # --- Record text limits ---
 
 class RecordTextLimitApiTests(APITestCase):

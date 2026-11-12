@@ -3,7 +3,6 @@ from rest_framework.exceptions import APIException
 
 from patients.models import PatientRecord
 from reports.generation import RECORD_FIELDS, current_report, generate_report
-from reports.models import RecordReport
 
 
 class Command(BaseCommand):
@@ -13,7 +12,7 @@ class Command(BaseCommand):
         parser.add_argument('record_id', type=int)
         parser.add_argument(
             '--language',
-            choices=[code for code, _ in RecordReport.LANGUAGE_CHOICES],
+            choices=[code for code, _ in PatientRecord.LANGUAGE_CHOICES],
             default='en',
         )
         parser.add_argument('--replace', action='store_true')

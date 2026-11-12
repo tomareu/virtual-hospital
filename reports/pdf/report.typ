@@ -114,12 +114,13 @@
 
 // --- Summary ---
 
-#card(fill: cream, stroke: dashed(deep))[
-  #heading(level: 2, data.summary.heading)
-  #data.summary.text
+#if data.summary != none [
+  #card(fill: cream, stroke: dashed(deep))[
+    #heading(level: 2, data.summary.heading)
+    #data.summary.text
+  ]
+  #v(10pt)
 ]
-
-#v(10pt)
 
 // --- Record details ---
 

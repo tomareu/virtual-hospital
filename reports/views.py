@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from patients.models import PatientRecord
-from .documents import issue_date, render_report, report_filename
+from .documents import document_filename, issue_date, render_record, render_report
 from .generation import current_report, ensure_ai_configured, generate_report
 from .serializers import RecordReportSerializer, ReportRequestSerializer
 from .turnstile import require_human
@@ -21,6 +21,12 @@ def get_current_report(record_id, language):
     if report is None:
         raise NotFound('This record has no up-to-date report in that language.', code='report_not_found')
     return report
+
+
+def pdf_download(pdf, filename):
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
 
 
 class RecordReportCreateView(APIView):
@@ -53,6 +59,12 @@ class RecordReportPdfView(APIView):
     def get(self, request, record_id, language):
         report = get_current_report(record_id, language)
         pdf = render_report(report, issue_date(request.query_params.get('tz')))
-        response = HttpResponse(pdf, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="{report_filename(report)}"'
-        return response
+        return pdf_download(pdf, document_filename(report.record, report.language))
+
+
+class RecordPdfView(APIView):
+
+    def get(self, request, record_id):
+        record = get_active_record(record_id)
+        pdf = render_record(record, issue_date(request.query_params.get('tz')))
+        return pdf_download(pdf, document_filename(record, record.language))

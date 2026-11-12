@@ -12,13 +12,8 @@ INDICATIONS_MAX_LENGTH = 750
 
 
 class RecordReport(models.Model):
-    LANGUAGE_CHOICES = [
-        ('en', 'English'),
-        ('es', 'Spanish'),
-    ]
-
     record = models.ForeignKey(PatientRecord, on_delete=models.CASCADE, related_name='reports')
-    language = models.CharField(max_length=2, choices=LANGUAGE_CHOICES)
+    language = models.CharField(max_length=2, choices=PatientRecord.LANGUAGE_CHOICES)
     summary = models.TextField(max_length=SUMMARY_MAX_LENGTH)
     diagnosis = models.CharField(max_length=DIAGNOSIS_MAX_LENGTH, blank=True)
     description = models.TextField(max_length=DESCRIPTION_MAX_LENGTH)

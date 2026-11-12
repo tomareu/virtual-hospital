@@ -24,7 +24,7 @@ import {
 import { formatRecordSummary } from '../../constants/recordOptions.js';
 import { escapeHtml, setAvatarWithFallback, formatDisplayDate, toLocalIsoDate, onActivate } from '../../utils/dom.js';
 import { showToast, confirmAction } from '../../utils/toast.js';
-import { t } from '../../i18n.js';
+import { t, getLocale } from '../../i18n.js';
 
 export const getPatientAdminView = () => {
     return `
@@ -583,6 +583,7 @@ export const initPatientAdminLogic = () => {
             pronouns: pronounsSelect.value,
             id_number: idNumberInput.value.toUpperCase(),
             record_date: admissionDate,
+            language: getLocale(),
             consultation_type: consultationTypeSelect.value,
             assigned_professional: assignedProfessionalSelect.value,
             description: descriptionInput.value,

@@ -48,9 +48,15 @@ def section(heading, text):
 
 
 def report_data(report, issued_on):
-    record = report.record
+    return document_data(report.record, report.language, report, report.summary, issued_on)
+
+
+def record_data(record, issued_on):
+    return document_data(record, record.language, record, None, issued_on)
+
+
+def document_data(record, language, content, summary, issued_on):
     patient = record.patient
-    language = report.language
     labels = LABELS[language]
     fields = labels['fields']
     text = labels['report']
@@ -62,9 +68,9 @@ def report_data(report, issued_on):
         (fields['professional'], labels['professionals'].get(record.assigned_professional)),
     ]
     details = [
-        (fields['diagnosis'], report.diagnosis),
-        (fields['description'], report.description),
-        (fields['procedures'], report.procedures),
+        (fields['diagnosis'], content.diagnosis),
+        (fields['description'], content.description),
+        (fields['procedures'], content.procedures),
     ]
     return {
         'language': language,
@@ -86,26 +92,34 @@ def report_data(report, issued_on):
             ],
         },
         'visit': [[label, value] for label, value in visit if value],
-        'summary': section(text['summary'], report.summary),
+        'summary': section(text['summary'], summary) if summary else None,
         'details': {
             'heading': text['details'],
             'rows': [[label, value] for label, value in details if value],
         },
-        'indications': section(fields['indications'], report.indications) if report.indications else None,
+        'indications': section(fields['indications'], content.indications) if content.indications else None,
         'footer': text['footer'],
     }
 
 
-def render_report(report, issued_on):
+def render_document(data):
     return typst.compile(
         report_template(),
         root=str(ASSETS_DIR),
         font_paths=[str(FONTS_DIR)],
         ignore_system_fonts=True,
-        sys_inputs={'data': json.dumps(report_data(report, issued_on), ensure_ascii=False)},
+        sys_inputs={'data': json.dumps(data, ensure_ascii=False)},
         pdf_standards=PDF_STANDARDS,
     )
 
 
-def report_filename(report):
-    return f'mlvh-{patient_code(report.record.patient)}-{report.record_id}-{report.language}.pdf'
+def render_report(report, issued_on):
+    return render_document(report_data(report, issued_on))
+
+
+def render_record(record, issued_on):
+    return render_document(record_data(record, issued_on))
+
+
+def document_filename(record, language):
+    return f'mlvh-{patient_code(record.patient)}-{record.id}-{language}.pdf'

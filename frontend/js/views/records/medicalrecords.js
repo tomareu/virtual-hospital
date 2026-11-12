@@ -16,7 +16,7 @@ import {
 } from '../../constants/patientOptions.js';
 import { formatRecordSummary } from '../../constants/recordOptions.js';
 import { showToast } from '../../utils/toast.js';
-import { t, tOption } from '../../i18n.js';
+import { t, tOption, getLocale } from '../../i18n.js';
 
 // --- Keeps the styled date text in sync with the (visually hidden) native date input ---
 const wireDateBadge = (inputId, textId) => {
@@ -309,6 +309,7 @@ export const initMedicalRecordsLogic = (initialPatientId = null) => {
                 assigned_professional: document.getElementById('record-professional').value,
                 diagnosis: document.getElementById('record-diagnosis').value,
                 record_date: document.getElementById('record-date').value,
+                language: getLocale(),
                 description: document.getElementById('record-description').value,
                 procedures: document.getElementById('record-procedures').value,
                 indications: document.getElementById('record-indications').value,
