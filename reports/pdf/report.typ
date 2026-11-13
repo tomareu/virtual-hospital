@@ -16,7 +16,8 @@
 
 // --- Document ---
 
-#set document(title: data.document_title, author: "My Little Virtual Hospital")
+#set document(title: lower(data.document_title), author: "My Little Virtual Hospital")
+#show: lower
 #set text(font: ("Noto Sans", "Noto Emoji"), size: 10.5pt, fill: ink, lang: data.language)
 #set par(leading: 0.65em, spacing: 0.9em)
 #set page(
@@ -39,7 +40,7 @@
 #show heading: set block(above: 0pt, below: 10pt)
 #show regex("\S{24}"): it => it + sym.zws
 
-#let caption(body) = text(size: 7.5pt, weight: 800, tracking: 0.06em, upper(body))
+#let caption(body) = text(size: 7.5pt, weight: 800, tracking: 0.06em, body)
 
 #let card(fill: none, stroke: none, body) = block(
   width: 100%,
