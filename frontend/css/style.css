@@ -1459,13 +1459,13 @@ fieldset[disabled] .mlvh-rounded-input {
 }
 
 .mlvh-date-badge-readonly,
-fieldset[disabled] .mlvh-date-badge {
+.mlvh-date-badge:has(.mlvh-date-badge-input:disabled) {
     background-color: var(--mlvh-disabled-bg);
     border-color: var(--mlvh-disabled-border);
 }
 
 .mlvh-date-badge-readonly .mlvh-date-badge-text,
-fieldset[disabled] .mlvh-date-badge * {
+.mlvh-date-badge:has(.mlvh-date-badge-input:disabled) * {
     color: var(--mlvh-disabled-text);
 }
 
@@ -1624,6 +1624,19 @@ fieldset[disabled] .mlvh-icon-btn.active img {
     font-size: 0.75rem;
     color: var(--mlvh-blue-deep);
     font-weight: 600;
+}
+
+.mlvh-history-entry-incomplete {
+    border-left: 6px solid var(--mlvh-blue-dark);
+    padding-left: calc(0.9rem - 5px);
+}
+
+.mlvh-history-entry-status {
+    margin-right: auto;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--mlvh-blue-deep);
+    white-space: nowrap;
 }
 
 .mlvh-history-entry-diagnosis {

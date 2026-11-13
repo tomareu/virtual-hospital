@@ -23,6 +23,8 @@ const ERROR_MESSAGE_KEYS = {
     not_found: 'api.errors.notFound',
     board_full: 'api.errors.boardFull',
     turnstile_failed: 'api.errors.turnstileFailed',
+    record_already_complete: 'api.errors.recordAlreadyComplete',
+    record_incomplete: 'api.errors.recordIncomplete',
 };
 
 const FIELD_ERROR_MESSAGE_KEYS = {

@@ -34,6 +34,18 @@ export const addPatientRecord = async (id, payload) => {
     return response.json();
 };
 
+export const completePatientRecord = async (patientId, recordId, payload) => {
+    const response = await fetch(await patientsUrl(`${patientId}/records/${recordId}/complete/`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+        throw await buildErrorFromResponse(response, t('api.errors.completeRecord'));
+    }
+    return response.json();
+};
+
 export const createPatient = async (patientData) => {
     const response = await fetch(await patientsUrl(), {
         method: 'POST',

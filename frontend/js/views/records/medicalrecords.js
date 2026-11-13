@@ -1,6 +1,6 @@
 // --- MODULE: medical records view ---
 
-import { fetchPatients, fetchPatientRecords, addPatientRecord } from '../../api/patients.js';
+import { fetchPatients, fetchPatientRecords, addPatientRecord, completePatientRecord } from '../../api/patients.js';
 import { ApiError } from '../../api/errors.js';
 import { AVATAR_BASE_PATH, DEFAULT_AVATAR } from '../../config.js';
 import { escapeHtml, setAvatarWithFallback, formatDisplayDate, toLocalIsoDate, onActivate } from '../../utils/dom.js';
@@ -68,19 +68,22 @@ const buildSummaryRows = (patient) => {
 
 // --- Timeline entries for the history card ---
 
+const incompleteFirst = (records) => [...records].sort((a, b) => Number(a.is_complete) - Number(b.is_complete));
+
 const buildHistoryEntries = (records) => {
     if (!records || records.length === 0) {
         return `<p class="mlvh-card-subtitle text-center mb-0">${t('records.empty')}</p>`;
     }
 
-    return records.map((record) => {
+    return incompleteFirst(records).map((record) => {
         const recordDate = record.record_date ?? (record.created_at ? toLocalIsoDate(new Date(record.created_at)) : '');
         const professionalLabel = tOption('professionals', record.assigned_professional);
 
         return `
-        <div class="mlvh-history-entry" data-record-id="${record.id}" role="button" tabindex="0">
+        <div class="mlvh-history-entry${record.is_complete ? '' : ' mlvh-history-entry-incomplete'}" data-record-id="${record.id}" role="button" tabindex="0">
             <div class="mlvh-history-entry-header">
                 <span class="mlvh-history-entry-date">${escapeHtml(formatDisplayDate(recordDate))}</span>
+                ${record.is_complete ? '' : `<span class="mlvh-history-entry-status">${t('records.incomplete')}</span>`}
                 ${professionalLabel ? `<span class="mlvh-history-entry-professional">${escapeHtml(professionalLabel)}</span>` : ''}
             </div>
             <div class="mlvh-history-entry-text">${escapeHtml(formatRecordSummary(record))}</div>
@@ -137,6 +140,8 @@ const getRecordFormHTML = () => `
         </fieldset>
     </form>
 `;
+
+const ADMISSION_FIELD_IDS = ['record-consultation-type', 'record-date', 'record-professional', 'record-description'];
 
 // --- LOGIC: event listeners and dom manipulation ---
 
@@ -342,12 +347,62 @@ export const initMedicalRecordsLogic = (initialPatientId = null) => {
         document.getElementById('record-procedures').value = record.procedures;
         document.getElementById('record-indications').value = record.indications;
 
+        if (!record.is_complete) {
+            wireRecordCompletion(patient, record);
+            return;
+        }
+
         document.getElementById('record-fieldset').disabled = true;
 
         setCardActions([
             { icon: '/assets/icons/misc/back.svg', label: t('records.back'), onClick: () => renderHistoryCard(patient, currentRecords) },
             { icon: '/assets/icons/misc/download.svg', label: t('records.download'), onClick: (event) => downloadReport(event.currentTarget, patient, record) },
         ]);
+    };
+
+    const wireRecordCompletion = (patient, record) => {
+        ADMISSION_FIELD_IDS.forEach((id) => {
+            document.getElementById(id).disabled = true;
+        });
+
+        const diagnosisInput = document.getElementById('record-diagnosis');
+        diagnosisInput.required = true;
+        diagnosisInput.placeholder = t('records.fields.required');
+
+        setCardActions([
+            { icon: '/assets/icons/misc/back.svg', label: t('records.back'), onClick: () => renderHistoryCard(patient, currentRecords) },
+            { icon: '/assets/icons/misc/save.svg', label: t('records.complete'), type: 'submit', form: 'record-form' },
+        ]);
+
+        document.getElementById('record-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const saveButtons = historyPlaceholder.querySelectorAll('.js-dynamic-action[type="submit"]');
+            saveButtons.forEach((button) => {
+                button.disabled = true;
+                button.setAttribute('aria-busy', 'true');
+            });
+
+            const payload = {
+                diagnosis: diagnosisInput.value,
+                procedures: document.getElementById('record-procedures').value,
+                indications: document.getElementById('record-indications').value,
+            };
+
+            try {
+                const completed = await completePatientRecord(patient.id, record.id, payload);
+                currentRecords = currentRecords.map((entry) => (entry.id === completed.id ? completed : entry));
+                showToast(t('records.completed'));
+                renderRecordDetail(patient, completed);
+            } catch (error) {
+                console.error('API Error:', error);
+                showToast(error instanceof ApiError ? error.message : t('records.completeError'), 'error');
+                saveButtons.forEach((button) => {
+                    button.disabled = false;
+                    button.removeAttribute('aria-busy');
+                });
+            }
+        });
     };
 
     const downloadReport = async (button, patient, record) => {
