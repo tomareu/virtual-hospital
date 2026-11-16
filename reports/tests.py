@@ -711,9 +711,23 @@ class GenerateReportCommandTests(TestCase):
 
 class SandboxResetTests(TestCase):
 
-    def test_reset_removes_reports_but_keeps_token_usage(self):
+    def test_reset_removes_visitor_reports_but_keeps_token_usage(self):
         create_report(build_record())
         DailyTokenUsage.objects.create(day=timezone.now().date(), tokens=1234)
         call_command('reset_sandbox', stdout=StringIO())
-        self.assertFalse(RecordReport.objects.exists())
+        self.assertFalse(RecordReport.objects.filter(record__patient__name='Momo').exists())
         self.assertEqual(tokens_used_today(), 1234)
+
+    def test_seed_reports_match_their_records(self):
+        call_command('reset_sandbox', stdout=StringIO())
+        for report in RecordReport.objects.select_related('record__patient'):
+            with self.subTest(record=report.record_id, language=report.language):
+                self.assertEqual(report.source_digest, source_digest(report.record))
+
+    def test_complete_seed_records_have_a_report_in_every_language(self):
+        call_command('reset_sandbox', stdout=StringIO())
+        languages = {code for code, _ in PatientRecord.LANGUAGE_CHOICES}
+        for record in PatientRecord.objects.prefetch_related('reports'):
+            with self.subTest(record=record.id):
+                expected = languages if record.is_complete else set()
+                self.assertEqual({report.language for report in record.reports.all()}, expected)
