@@ -355,7 +355,18 @@ class PromptTests(TestCase):
                 'procedures': '',
                 'indications': '',
             },
+            'procedure_results': [],
         })
+
+    def test_prompt_separates_each_procedure_from_its_result(self):
+        record = build_record(
+            procedures='Test ocular.\nTest de lógica: 404.\nControl a las 10:30.\nVibe check:  failed ',
+        )
+        details = json.loads(build_messages(record, 'es')[1]['content'])
+        self.assertEqual(details['procedure_results'], [
+            {'procedure': 'Test de lógica', 'result': '404'},
+            {'procedure': 'Vibe check', 'result': 'failed'},
+        ])
 
 # --- Report freshness ---
 
