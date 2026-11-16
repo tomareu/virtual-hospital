@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'patients',
     'analytics',
     'board',
+    'reports',
 ]
 
 MIDDLEWARE = [
@@ -187,3 +188,14 @@ if not DEBUG:
 
 # Shared secret for the sandbox reset endpoint!
 SANDBOX_RESET_TOKEN = os.environ.get('SANDBOX_RESET_TOKEN')
+
+# --- AI SUMMARIES ---
+AI_BASE_URL = os.environ.get('AI_BASE_URL') or 'https://api.groq.com/openai/v1'
+AI_MODEL = os.environ.get('AI_MODEL') or 'openai/gpt-oss-120b'
+AI_API_KEY = os.environ.get('AI_API_KEY')
+AI_DAILY_TOKEN_BUDGET = int(os.environ.get('AI_DAILY_TOKEN_BUDGET') or 180000)
+
+# --- TURNSTILE ---
+TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY')
+_turnstile_hostnames_env = os.environ.get('TURNSTILE_ALLOWED_HOSTNAMES') or 'virtual-hospital.pages.dev'
+TURNSTILE_ALLOWED_HOSTNAMES = [host.strip() for host in _turnstile_hostnames_env.split(',') if host.strip()]

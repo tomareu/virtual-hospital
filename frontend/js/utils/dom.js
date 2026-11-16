@@ -37,6 +37,20 @@ export const toLocalIsoDate = (date = new Date()) =>
     [date.getFullYear(), date.getMonth() + 1, date.getDate()]
         .map((part) => String(part).padStart(2, '0'))
         .join('-');
+
+// --- File downloads ---
+
+const OBJECT_URL_LIFETIME_MS = 60000;
+
+export const downloadBlob = (blob, filename) => {
+    const url = URL.createObjectURL(blob);
+    const link = Object.assign(document.createElement('a'), { href: url, download: filename });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), OBJECT_URL_LIFETIME_MS);
+};
+
 // --- Delegated activation for role="button" elements ---
 
 export const onActivate = (container, selector, handler) => {

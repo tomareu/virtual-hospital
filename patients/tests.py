@@ -1,9 +1,21 @@
+import datetime
+from io import StringIO
+from unittest.mock import patch
+
+from django.core.management import call_command
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from rest_framework.serializers import ValidationError
 from rest_framework.test import APITestCase
 
-from .models import Patient
+from reports.models import RecordReport
+from .models import (
+    Patient,
+    PatientRecord,
+    RECORD_DESCRIPTION_MAX_LENGTH,
+    RECORD_INDICATIONS_MAX_LENGTH,
+    RECORD_PROCEDURES_MAX_LENGTH,
+)
 from .serializers import PatientSerializer
 
 # --- Fixtures ---
@@ -22,6 +34,25 @@ PATIENT_PAYLOAD = {
     'record_date': '2026-09-09',
 }
 
+RECORD_PAYLOAD = {
+    'consultation_type': 'preventive',
+    'assigned_professional': 'rn_tam',
+    'record_date': '2026-09-10',
+    'description': 'Routine follow-up.',
+}
+
+COMPLETION_PAYLOAD = {
+    'diagnosis': 'Mild cold.',
+    'procedures': 'Physical exam.',
+    'indications': 'Rest and fluids.',
+}
+
+RECORD_TEXT_LIMITS = {
+    'description': RECORD_DESCRIPTION_MAX_LENGTH,
+    'procedures': RECORD_PROCEDURES_MAX_LENGTH,
+    'indications': RECORD_INDICATIONS_MAX_LENGTH,
+}
+
 def build_patient(**overrides):
     fields = {
         'name': 'Momo',
@@ -34,6 +65,18 @@ def build_patient(**overrides):
     }
     fields.update(overrides)
     return Patient.objects.create(**fields)
+
+def reset_sandbox_at(now):
+    with patch('django.utils.timezone.now', return_value=now):
+        call_command('reset_sandbox', stdout=StringIO())
+
+def seed_days():
+    return [
+        *Patient.objects.order_by('pk').values_list('created_at__date', flat=True),
+        *PatientRecord.objects.order_by('pk').values_list('record_date', flat=True),
+        *PatientRecord.objects.order_by('pk').values_list('created_at__date', flat=True),
+        *RecordReport.objects.order_by('pk').values_list('generated_at__date', flat=True),
+    ]
 
 # --- Model behaviour ---
 
@@ -108,6 +151,27 @@ class PatientAdmissionApiTests(APITestCase):
         patient = Patient.objects.get(id_number='A12')
         self.assertEqual(patient.records.count(), 1)
 
+    def test_admission_record_keeps_the_date_sent_by_the_visitor(self):
+        self.client.post(self.url, PATIENT_PAYLOAD, format='json')
+
+        record = PatientRecord.objects.get(patient__id_number='A12')
+        self.assertEqual(record.record_date, datetime.date(2026, 9, 9))
+
+    def test_admission_without_a_date_uses_the_server_date(self):
+        payload = {field: value for field, value in PATIENT_PAYLOAD.items() if field != 'record_date'}
+        server_now = datetime.datetime(2026, 11, 12, 0, 52, tzinfo=datetime.timezone.utc)
+        with patch('django.utils.timezone.now', return_value=server_now):
+            self.client.post(self.url, payload, format='json')
+
+        record = PatientRecord.objects.get(patient__id_number='A12')
+        self.assertEqual(record.record_date, datetime.date(2026, 11, 12))
+
+    def test_admission_rejects_an_invalid_date(self):
+        response = self.client.post(self.url, {**PATIENT_PAYLOAD, 'record_date': '2026-13-40'}, format='json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('record_date', response.data)
+
     def test_admission_rejects_an_invalid_id_number(self):
         response = self.client.post(
             self.url, {**PATIENT_PAYLOAD, 'id_number': 'TOOLONG'}, format='json'
@@ -144,3 +208,166 @@ class ApiErrorCodeTests(APITestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.data['detail']['code'], 'not_found')
+
+# --- Record language ---
+
+class RecordLanguageApiTests(APITestCase):
+
+    def setUp(self):
+        self.patient = build_patient()
+        self.add_record_url = f'/api/patients/{self.patient.id}/add_record/'
+
+    def test_consultation_keeps_the_language_it_was_written_in(self):
+        self.client.post(self.add_record_url, {**RECORD_PAYLOAD, 'language': 'es'}, format='json')
+
+        self.assertEqual(self.patient.records.get().language, 'es')
+
+    def test_admission_keeps_the_language_it_was_written_in(self):
+        self.client.post('/api/patients/', {**PATIENT_PAYLOAD, 'id_number': 'B7', 'language': 'es'}, format='json')
+
+        self.assertEqual(PatientRecord.objects.get(patient__id_number='B7').language, 'es')
+
+    def test_records_without_a_language_are_recorded_in_english(self):
+        self.client.post(self.add_record_url, RECORD_PAYLOAD, format='json')
+
+        self.assertEqual(self.patient.records.get().language, 'en')
+
+    def test_unsupported_language_is_rejected(self):
+        response = self.client.post(self.add_record_url, {**RECORD_PAYLOAD, 'language': 'fr'}, format='json')
+
+        self.assertEqual(response.data['language'][0]['code'], 'invalid_choice')
+
+# --- First consultation ---
+
+class FirstConsultationApiTests(APITestCase):
+
+    def setUp(self):
+        self.client.post('/api/patients/', PATIENT_PAYLOAD, format='json')
+        self.patient = Patient.objects.get(id_number='A12')
+        self.record = self.patient.records.get()
+        self.url = f'/api/patients/{self.patient.id}/records/{self.record.id}/complete/'
+
+    def test_first_consultation_starts_incomplete(self):
+        response = self.client.get(f'/api/patients/{self.patient.id}/records/')
+
+        self.assertFalse(response.data[0]['is_complete'])
+
+    def test_completing_fills_in_the_missing_fields(self):
+        response = self.client.post(self.url, COMPLETION_PAYLOAD, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data['is_complete'])
+        self.record.refresh_from_db()
+        self.assertEqual(
+            {field: getattr(self.record, field) for field in COMPLETION_PAYLOAD},
+            COMPLETION_PAYLOAD,
+        )
+
+    def test_completing_requires_a_diagnosis(self):
+        response = self.client.post(self.url, {**COMPLETION_PAYLOAD, 'diagnosis': '  '}, format='json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data['diagnosis'][0]['code'], 'blank')
+        self.record.refresh_from_db()
+        self.assertFalse(self.record.is_complete)
+
+    def test_completing_rejects_text_over_its_limit(self):
+        for field in ['procedures', 'indications']:
+            with self.subTest(field=field):
+                response = self.client.post(
+                    self.url, {**COMPLETION_PAYLOAD, field: 'x' * (RECORD_TEXT_LIMITS[field] + 1)}, format='json'
+                )
+
+                self.assertEqual(response.data[field][0]['code'], 'max_length')
+
+    def test_a_complete_consultation_cannot_be_completed_again(self):
+        self.client.post(self.url, COMPLETION_PAYLOAD, format='json')
+        response = self.client.post(self.url, {**COMPLETION_PAYLOAD, 'diagnosis': 'Something else.'}, format='json')
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.data['detail']['code'], 'record_already_complete')
+        self.record.refresh_from_db()
+        self.assertEqual(self.record.diagnosis, COMPLETION_PAYLOAD['diagnosis'])
+
+    def test_consultations_added_later_are_complete(self):
+        response = self.client.post(f'/api/patients/{self.patient.id}/add_record/', RECORD_PAYLOAD, format='json')
+
+        self.assertTrue(response.data['is_complete'])
+
+    def test_records_of_other_patients_are_not_found(self):
+        other = build_patient(id_number='B7')
+        response = self.client.post(
+            f'/api/patients/{other.id}/records/{self.record.id}/complete/', COMPLETION_PAYLOAD, format='json'
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_records_of_discharged_patients_are_not_found(self):
+        self.client.delete(f'/api/patients/{self.patient.id}/')
+        response = self.client.post(self.url, COMPLETION_PAYLOAD, format='json')
+
+        self.assertEqual(response.status_code, 404)
+
+# --- Record text limits ---
+
+class RecordTextLimitApiTests(APITestCase):
+
+    def setUp(self):
+        self.patient = build_patient()
+        self.add_record_url = f'/api/patients/{self.patient.id}/add_record/'
+
+    def test_record_text_fields_accept_text_at_their_limit(self):
+        payload = {**RECORD_PAYLOAD, **{field: 'x' * limit for field, limit in RECORD_TEXT_LIMITS.items()}}
+        response = self.client.post(self.add_record_url, payload, format='json')
+
+        self.assertEqual(response.status_code, 201)
+
+    def test_record_text_fields_reject_text_over_their_limit(self):
+        for field, limit in RECORD_TEXT_LIMITS.items():
+            with self.subTest(field=field):
+                response = self.client.post(
+                    self.add_record_url, {**RECORD_PAYLOAD, field: 'x' * (limit + 1)}, format='json'
+                )
+
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.data[field][0]['code'], 'max_length')
+
+    def test_admission_rejects_a_description_over_the_limit(self):
+        response = self.client.post(
+            '/api/patients/',
+            {**PATIENT_PAYLOAD, 'description': 'x' * (RECORD_DESCRIPTION_MAX_LENGTH + 1)},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data['description'][0]['code'], 'max_length')
+
+
+class RecordTextConstraintTests(TestCase):
+
+    def test_database_rejects_record_text_over_its_limit(self):
+        patient = build_patient()
+        for field, limit in RECORD_TEXT_LIMITS.items():
+            with self.subTest(field=field):
+                values = {'description': 'Routine follow-up.', field: 'x' * (limit + 1)}
+                with self.assertRaises(IntegrityError):
+                    with transaction.atomic():
+                        PatientRecord.objects.create(patient=patient, record_type='consultation', **values)
+
+# --- Sandbox reset ---
+
+RESET_NOW = datetime.datetime(2027, 3, 10, 12, 0, tzinfo=datetime.timezone.utc)
+
+class SandboxResetTests(TestCase):
+
+    def test_reset_moves_the_newest_seed_date_to_yesterday(self):
+        reset_sandbox_at(RESET_NOW)
+
+        self.assertEqual(max(seed_days()), datetime.date(2027, 3, 9))
+
+    def test_reset_keeps_the_time_between_seed_dates(self):
+        reset_sandbox_at(RESET_NOW)
+        first_reset = seed_days()
+        reset_sandbox_at(RESET_NOW + datetime.timedelta(days=10))
+
+        self.assertEqual(seed_days(), [day + datetime.timedelta(days=10) for day in first_reset])

@@ -12,4 +12,7 @@ urlpatterns = [
 
     # Route all whiteboard requests to the board app
     path('api/board/', include('board.urls')),
+
+    # Route all report requests to the reports app
+    path('api/reports/', include('reports.urls')),
 ]

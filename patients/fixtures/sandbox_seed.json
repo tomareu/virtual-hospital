@@ -11,8 +11,7 @@
     "location": "EA",
     "id_number": "1234",
     "avatar_style": "monkey_male",
-    "main_symptom": "",
-    "created_at": "2026-07-28T01:23:24.379Z",
+    "created_at": "2026-10-13T14:10:00Z",
     "is_active": true
   }
 },
@@ -28,8 +27,7 @@
     "location": "EA",
     "id_number": "1111",
     "avatar_style": "human_female",
-    "main_symptom": "",
-    "created_at": "2026-07-28T01:30:49.125Z",
+    "created_at": "2026-10-27T12:40:00Z",
     "is_active": true
   }
 },
@@ -45,73 +43,123 @@
     "location": "XX",
     "id_number": "456",
     "avatar_style": "unknown_unknown",
-    "main_symptom": "",
-    "created_at": "2026-08-04T21:26:30.034Z",
+    "created_at": "2026-11-15T13:20:00Z",
     "is_active": true
+  }
+},
+{
+  "model": "patients.patientrecord",
+  "pk": 1,
+  "fields": {
+    "patient": 14,
+    "record_type": "admission",
+    "consultation_type": "urgent",
+    "assigned_professional": "dr_milo",
+    "language": "en",
+    "record_date": "2026-10-13",
+    "diagnosis": "Hiccups from eating too fast",
+    "procedures": "Gentle tummy check. Small sips of warm water and a slow breathing exercise until the hiccups stopped.",
+    "indications": "Eat one banana at a time and chew slowly. Come back if the hiccups last more than a day.",
+    "description": "Monki arrived hiccuping nonstop after eating three bananas in a row at a jungle picnic. Mild tummy discomfort, no fever, still playful and eating well.",
+    "created_at": "2026-10-13T14:10:00Z"
   }
 },
 {
   "model": "patients.patientrecord",
   "pk": 2,
   "fields": {
-    "patient": 14,
+    "patient": 15,
     "record_type": "admission",
     "consultation_type": "scheduled",
     "assigned_professional": "dr_milo",
-    "record_date": "2026-08-07",
-    "diagnosis": "",
-    "procedures": "",
-    "indications": "",
-    "description": "lol idk",
-    "created_at": "2026-07-28T01:23:24.380Z"
+    "language": "es",
+    "record_date": "2026-10-27",
+    "diagnosis": "Tonta.",
+    "procedures": "Test ocular.\nTAC cerebral sin anomalías.\nTest de coeficiente intelectual: temperatura ambiente.",
+    "indications": "Armar rompecabezas.\nEstudiar.\nPonerse las pilas.",
+    "description": "Se tropezó 10 veces en un día.",
+    "created_at": "2026-10-27T12:40:00Z"
   }
 },
 {
   "model": "patients.patientrecord",
   "pk": 3,
   "fields": {
-    "patient": 15,
-    "record_type": "admission",
-    "consultation_type": "scheduled",
-    "assigned_professional": "rn_tam",
-    "record_date": "2026-08-07",
-    "diagnosis": "",
-    "procedures": "",
-    "indications": "",
-    "description": "fsdfsdfsdfsdfd\nfds\nf\nsdf\nsd\nf\nsd\nf\nsdrthrthrthtglggr",
-    "created_at": "2026-07-28T01:30:49.128Z"
-  }
-},
-{
-  "model": "patients.patientrecord",
-  "pk": 7,
-  "fields": {
     "patient": 19,
     "record_type": "admission",
-    "consultation_type": "scheduled",
-    "assigned_professional": "dr_milo",
-    "record_date": "2026-08-07",
+    "consultation_type": "urgent",
+    "assigned_professional": "rn_tam",
+    "language": "en",
+    "record_date": "2026-11-15",
     "diagnosis": "",
     "procedures": "",
     "indications": "",
-    "description": "thtfh",
-    "created_at": "2026-08-04T21:26:30.036Z"
+    "description": "Came in speaking an unknown language, saying \"sndsjnbabababobaoabaohndskdn babaoabao\" while pointing at their tummy.",
+    "created_at": "2026-11-15T13:20:00Z"
   }
 },
 {
-  "model": "patients.patientrecord",
-  "pk": 19,
+  "model": "reports.recordreport",
+  "pk": 9,
   "fields": {
-    "patient": 14,
-    "record_type": "consultation",
-    "consultation_type": "scheduled",
-    "assigned_professional": "rn_tam",
-    "record_date": "2026-08-10",
-    "diagnosis": "monki illness",
-    "procedures": "killed him",
-    "indications": "R.I.P",
-    "description": "ill monki",
-    "created_at": "2026-08-10T04:47:31.971Z"
+    "record": 1,
+    "language": "en",
+    "summary": "Monki presented with persistent hiccups after a rapid banana binge, reporting mild abdominal discomfort but no fever and remaining playful. A gentle abdominal examination was performed, followed by warm water sips and slow breathing exercises, which resolved the hiccups. He was advised to eat bananas one at a time, chew thoroughly, and return if the hiccups persist beyond a day.",
+    "diagnosis": "Hiccups from eating too fast",
+    "description": "Monki arrived hiccuping nonstop after eating three bananas in a row at a jungle picnic. Mild tummy discomfort, no fever, still playful and eating well.",
+    "procedures": "Gentle tummy check. Small sips of warm water and a slow breathing exercise until the hiccups stopped.",
+    "indications": "Eat one banana at a time and chew slowly. Come back if the hiccups last more than a day.",
+    "source_digest": "fa152c754f46c4ff34426a99758a6854c08edd0c6ca6403b0d2fdcdab5c2a048",
+    "generated_by": "openai/gpt-oss-120b",
+    "generated_at": "2026-11-16T04:19:34.381Z"
+  }
+},
+{
+  "model": "reports.recordreport",
+  "pk": 10,
+  "fields": {
+    "record": 1,
+    "language": "es",
+    "summary": "Monki acudió a la consulta por hipo persistente tras comer rápidamente. Se le realizó una revisión abdominal suave y se le ofrecieron sorbos de agua tibia y respiración lenta, lo que detuvo el hipo. Se le indicó comer los plátanos uno a uno y volver si el hipo persiste más de un día.",
+    "diagnosis": "Hipo por comer demasiado rápido",
+    "description": "Monki llegó con hipo sin parar después de comer tres plátanos seguidos en un picnic en la jungla. Molestia leve en el estómago, sin fiebre, sigue juguetón y comiendo bien.",
+    "procedures": "Revisión suave del abdomen. Pequeños sorbos de agua tibia y ejercicio de respiración lenta hasta que el hipo se detuvo.",
+    "indications": "Comer un plátano a la vez y masticar despacio. Regresar si el hipo dura más de un día.",
+    "source_digest": "fa152c754f46c4ff34426a99758a6854c08edd0c6ca6403b0d2fdcdab5c2a048",
+    "generated_by": "openai/gpt-oss-120b",
+    "generated_at": "2026-11-16T04:19:40.717Z"
+  }
+},
+{
+  "model": "reports.recordreport",
+  "pk": 11,
+  "fields": {
+    "record": 2,
+    "language": "en",
+    "summary": "Lol was admitted for a scheduled visit after repeatedly tripping throughout the day. The examination included an ocular test, a brain CT scan that showed no abnormalities, and an IQ test whose result was noted as ambient temperature. The care plan recommends assembling puzzles, studying, and getting her act together.",
+    "diagnosis": "Silly.",
+    "description": "She tripped 10 times in one day.",
+    "procedures": "Ocular test.\nBrain CT scan without abnormalities.\nIntelligence quotient test: ambient temperature.",
+    "indications": "Assemble puzzles.\nStudy.\nGet your act together.",
+    "source_digest": "4f2c26620a9ea0ff8870c1f94b32b40dadbe7141cbb6806e127c5e74b3470b75",
+    "generated_by": "openai/gpt-oss-120b",
+    "generated_at": "2026-11-16T04:39:03.852Z"
+  }
+},
+{
+  "model": "reports.recordreport",
+  "pk": 12,
+  "fields": {
+    "record": 2,
+    "language": "es",
+    "summary": "Lol fue ingresada de forma programada y se observó que se tropezó diez veces en un día. Durante la consulta se le realizó un test ocular, una TAC cerebral sin anomalías y un test de coeficiente intelectual cuyo resultado fue \"temperatura ambiente\". Se le indicó armar rompecabezas, estudiar y ponerse las pilas.",
+    "diagnosis": "Tonta.",
+    "description": "Se tropezó 10 veces en un día.",
+    "procedures": "Test ocular.\nTAC cerebral sin anomalías.\nTest de coeficiente intelectual: temperatura ambiente.",
+    "indications": "Armar rompecabezas.\nEstudiar.\nPonerse las pilas.",
+    "source_digest": "4f2c26620a9ea0ff8870c1f94b32b40dadbe7141cbb6806e127c5e74b3470b75",
+    "generated_by": "openai/gpt-oss-120b",
+    "generated_at": "2026-11-16T04:39:09.924Z"
   }
 }
 ]

@@ -22,6 +22,9 @@ const ERROR_MESSAGE_KEYS = {
     unique: 'api.errors.duplicateId',
     not_found: 'api.errors.notFound',
     board_full: 'api.errors.boardFull',
+    turnstile_failed: 'api.errors.turnstileFailed',
+    record_already_complete: 'api.errors.recordAlreadyComplete',
+    record_incomplete: 'api.errors.recordIncomplete',
 };
 
 const FIELD_ERROR_MESSAGE_KEYS = {
@@ -32,9 +35,10 @@ const FIELD_ERROR_MESSAGE_KEYS = {
 };
 
 export class ApiError extends Error {
-    constructor(message) {
+    constructor(message, code = null) {
         super(message);
         this.name = 'ApiError';
+        this.code = code;
     }
 }
 
@@ -58,5 +62,6 @@ const describeError = ({ field, error }, fallbackMessage) => {
 export const buildErrorFromResponse = async (response, fallbackMessage) => {
     const payload = (await response.json().catch(() => null)) ?? {};
     const firstError = findFirstError(payload);
-    return new ApiError(firstError ? describeError(firstError, fallbackMessage) : fallbackMessage);
+    if (!firstError) return new ApiError(fallbackMessage);
+    return new ApiError(describeError(firstError, fallbackMessage), firstError.error.code);
 };

@@ -1,3 +1,4 @@
 {
-    "apiBaseUrl": "https://virtual-hospital-b471.onrender.com"
+    "apiBaseUrl": "https://virtual-hospital-b471.onrender.com",
+    "turnstileSiteKey": "0x4AAAAAAF9oqduVAYrKlWA4"
 }

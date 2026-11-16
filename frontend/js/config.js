@@ -17,5 +17,6 @@ async function loadConfig() {
 const configPromise = loadConfig();
 
 export const getApiBaseUrl = async () => `${(await configPromise).apiBaseUrl}/api`;
+export const getTurnstileSiteKey = async () => (await configPromise).turnstileSiteKey;
 export const AVATAR_BASE_PATH = '/assets/avatars';
 export const DEFAULT_AVATAR = '/assets/default-avatar.png';

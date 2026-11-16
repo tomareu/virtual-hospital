@@ -17,13 +17,14 @@ import {
     ID_NUMBER_PATTERN,
     ID_NUMBER_MAXLENGTH,
     NAME_MAXLENGTH,
+    DESCRIPTION_MAXLENGTH,
     renderOptions,
     renderIconButtons,
 } from '../../constants/patientOptions.js';
 import { formatRecordSummary } from '../../constants/recordOptions.js';
 import { escapeHtml, setAvatarWithFallback, formatDisplayDate, toLocalIsoDate, onActivate } from '../../utils/dom.js';
 import { showToast, confirmAction } from '../../utils/toast.js';
-import { t } from '../../i18n.js';
+import { t, getLocale } from '../../i18n.js';
 
 export const getPatientAdminView = () => {
     return `
@@ -138,7 +139,7 @@ export const getPatientModal = () => {
                                 </div>
                                 <div class="mb-2">
                                     <label class="form-label small text-muted mb-0 d-block">${t('patients.fields.description')}</label>
-                                    <textarea class="form-control form-control-sm mlvh-rounded-textarea" id="record_description" rows="2" placeholder="${t('patients.fields.descriptionPlaceholder')}" required></textarea>
+                                    <textarea class="form-control form-control-sm mlvh-rounded-textarea" id="record_description" rows="2" maxlength="${DESCRIPTION_MAXLENGTH}" placeholder="${t('patients.fields.descriptionPlaceholder')}" required></textarea>
                                 </div>
                                 <div class="text-end mt-3">
                                     <button type="submit" class="btn btn-primary w-100">${t('patients.create.submit')}</button>
@@ -259,6 +260,7 @@ export const getPatientModal = () => {
 export const initPatientAdminLogic = () => {
 
     // DOM elements
+    const createModalElement = document.getElementById('createPatientModal');
     const patientForm = document.getElementById('patient-form');
     const avatarPreview = document.getElementById('avatar-preview');
     const nameInput = document.getElementById('name');
@@ -373,7 +375,13 @@ export const initPatientAdminLogic = () => {
     wireIconGroup(detailsSpeciesIconGroup, detailsSpecies);
     wireIconGroup(detailsSexIconGroup, detailsSex);
 
-    admissionDateInput.textContent = formatDisplayDate(toLocalIsoDate());
+    let admissionDate = '';
+
+    createModalElement.addEventListener('show.bs.modal', () => {
+        admissionDate = toLocalIsoDate();
+        admissionDateInput.textContent = formatDisplayDate(admissionDate);
+    });
+
     setUnknownDefaults(speciesSelect, sexSelect, locationSelect, pronounsSelect, speciesIconGroup, sexIconGroup, avatarPreview);
 
     speciesSelect.addEventListener('change', () =>
@@ -574,6 +582,8 @@ export const initPatientAdminLogic = () => {
             location: locationSelect.value,
             pronouns: pronounsSelect.value,
             id_number: idNumberInput.value.toUpperCase(),
+            record_date: admissionDate,
+            language: getLocale(),
             consultation_type: consultationTypeSelect.value,
             assigned_professional: assignedProfessionalSelect.value,
             description: descriptionInput.value,
@@ -584,10 +594,9 @@ export const initPatientAdminLogic = () => {
             await loadPatients();
 
             patientForm.reset();
-            admissionDateInput.textContent = formatDisplayDate(toLocalIsoDate());
             setUnknownDefaults(speciesSelect, sexSelect, locationSelect, pronounsSelect, speciesIconGroup, sexIconGroup, avatarPreview);
 
-            bootstrap.Modal.getInstance(document.getElementById('createPatientModal'))?.hide();
+            bootstrap.Modal.getInstance(createModalElement)?.hide();
             showToast(t('patients.create.success'));
         } catch (error) {
             console.error(error);

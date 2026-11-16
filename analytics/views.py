@@ -54,7 +54,6 @@ def patients_by_species(request):
 def consultations_by_reason(request):
     queryset = (
         PatientRecord.objects
-        .filter(record_type='consultation')
         .exclude(consultation_type='')
         .values('consultation_type')
         .annotate(count=Count('id'))
