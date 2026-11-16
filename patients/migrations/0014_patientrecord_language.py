@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='patientrecord',
             name='language',
-            field=models.CharField(choices=[('en', 'English'), ('es', 'Spanish')], default='en', max_length=2),
+            field=models.CharField(choices=[('en', 'English'), ('es', 'Spanish')], db_default='en', default='en', max_length=2),
         ),
     ]

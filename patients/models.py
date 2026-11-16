@@ -120,7 +120,7 @@ class PatientRecord(models.Model):
     record_type = models.CharField(max_length=20, choices=RECORD_TYPE_CHOICES)
     consultation_type = models.CharField(max_length=20, choices=CONSULTATION_TYPE_CHOICES, blank=True)
     assigned_professional = models.CharField(max_length=20, choices=PROFESSIONAL_CHOICES, blank=True)
-    language = models.CharField(max_length=2, choices=LANGUAGE_CHOICES, default='en')
+    language = models.CharField(max_length=2, choices=LANGUAGE_CHOICES, default='en', db_default='en')
 
     # Date the consultation actually took place, editable by whoever logs it
     record_date = models.DateField(default=timezone.localdate)
