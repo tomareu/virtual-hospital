@@ -181,6 +181,10 @@ class ReportGenerationApiTests(APITestCase):
     def post_with_reply(self, content):
         self.provider.responses = [completion(content)]
         with self.assertLogs('reports.generation', level='WARNING'):
+            return self.post_unavailable()
+
+    def post_unavailable(self):
+        with self.assertLogs('django.request', level='ERROR'):
             return self.client.post(self.url, self.payload, format='json')
 
     def test_generation_stores_the_report_and_its_model(self):
@@ -236,19 +240,19 @@ class ReportGenerationApiTests(APITestCase):
 
     def test_unreachable_turnstile_reports_unavailable(self):
         self.verify.side_effect = TurnstileUnavailable('ConnectError')
-        response = self.client.post(self.url, self.payload, format='json')
+        response = self.post_unavailable()
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
         self.assertEqual(response.data['detail']['code'], 'report_unavailable')
 
     @override_settings(AI_API_KEY=None)
     def test_missing_ai_key_reports_unavailable_without_a_human_check(self):
-        response = self.client.post(self.url, self.payload, format='json')
+        response = self.post_unavailable()
         self.assertEqual(response.data['detail']['code'], 'report_unavailable')
         self.verify.assert_not_called()
 
     @override_settings(TURNSTILE_SECRET_KEY=None)
     def test_missing_turnstile_secret_reports_unavailable(self):
-        response = self.client.post(self.url, self.payload, format='json')
+        response = self.post_unavailable()
         self.assertEqual(response.data['detail']['code'], 'report_unavailable')
         self.assertEqual(self.provider.requests, [])
 
@@ -264,14 +268,14 @@ class ReportGenerationApiTests(APITestCase):
     def test_provider_errors_release_the_reservation(self):
         self.provider.responses = [httpx.Response(500)]
         with self.assertLogs('reports.generation', level='WARNING'):
-            response = self.client.post(self.url, self.payload, format='json')
+            response = self.post_unavailable()
         self.assertEqual(response.data['detail']['code'], 'report_unavailable')
         self.assertEqual(tokens_used_today(), 0)
 
     def test_truncated_output_is_rejected_but_its_tokens_are_counted(self):
         self.provider.responses = [completion(finish_reason='length', total_tokens=1600)]
         with self.assertLogs('reports.generation', level='WARNING'):
-            response = self.client.post(self.url, self.payload, format='json')
+            response = self.post_unavailable()
         self.assertEqual(response.data['detail']['code'], 'report_unavailable')
         self.assertFalse(RecordReport.objects.exists())
         self.assertEqual(tokens_used_today(), 1600)
